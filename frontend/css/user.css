@@ -1,0 +1,16 @@
+.ticket-card {
+  width: 420px;
+  border-radius: 14px;
+}
+
+.category-select option {
+  font-size: 15px;
+}
+
+textarea {
+  resize: none;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}

@@ -1,0 +1,25 @@
+body {
+  font-family: Arial;
+  margin: 30px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+td, th {
+  border: 1px solid #ccc;
+  padding: 8px;
+}
+
+.description {
+  max-width: 400px;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.error {
+  color: red;
+}
