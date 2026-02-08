@@ -1,64 +1,90 @@
-/* ---------- AUTH GUARD ---------- */
+/* ---------- HARD AUTH GUARD ---------- */
 const adminName = localStorage.getItem("adminName");
 
-if (!adminName || adminName === "undefined") {
+if (!adminName || adminName === "undefined" || adminName.trim() === "") {
   localStorage.clear();
   window.location.href = "admin-login.html";
 }
 
-/* ---------- SHOW ADMIN NAME ---------- */
-document.getElementById("adminName").innerText = adminName;
+/* ---------- DISPLAY ADMIN NAME ---------- */
+document.addEventListener("DOMContentLoaded", () => {
+  const adminSpan = document.getElementById("adminName");
+  if (!adminSpan) {
+    localStorage.clear();
+    window.location.href = "admin-login.html";
+    return;
+  }
+  adminSpan.innerText = adminName;
+});
 
-/* ---------- LOAD DATA ---------- */
+/* ---------- LOAD COMPLAINTS ---------- */
 async function load() {
-  const complaints = await fetch("http://localhost:3000/api/complaints").then(r => r.json());
-  const admins = await fetch("http://localhost:3000/api/admins").then(r => r.json());
+  try {
+    const complaints = await fetch("http://localhost:3000/api/complaints")
+      .then(r => r.json());
 
-  const tbody = document.getElementById("rows");
-  tbody.innerHTML = "";
+    const admins = await fetch("http://localhost:3000/api/admins")
+      .then(r => r.json());
 
-  complaints.forEach(c => {
-    const tr = document.createElement("tr");
+    const tbody = document.getElementById("rows");
+    tbody.innerHTML = "";
 
-    tr.innerHTML = `
-      <td>${c.category}</td>
-      <td>${c.title}</td>
-      <td style="max-width:300px; white-space:normal; word-wrap:break-word;">
-        ${c.description}
-      </td>
-      <td>${c.hostname}<br><small>${c.ip}</small></td>
-      <td><span class="badge bg-info">${c.status}</span></td>
+    complaints
+      // ✅ SHOW ONLY ACTIVE TICKETS
+      .filter(c => c.status === "NEW" || c.status === "IN_PROGRESS"||c.status==='OPEN')
+      .forEach(c => {
 
-      <td>
-        <select class="form-select form-select-sm">
-          ${admins.map(a => `
-            <option value="${a.id}" ${a.name === c.assigned_admin ? "selected" : ""}>
-              ${a.name}
-            </option>`).join("")}
-        </select>
-      </td>
+        const tr = document.createElement("tr");
 
-      <td>
-        <button class="btn btn-sm btn-primary">Assign</button>
-        <button class="btn btn-sm btn-warning">In Progress</button>
-        <button class="btn btn-sm btn-success">Completed</button>
-        <button class="btn btn-sm btn-danger">Rejected</button>
-      </td>
-    `;
+        tr.innerHTML = `
+          <td>${c.category}</td>
+          <td>${c.title}</td>
+          <td style="max-width:300px; white-space:normal; word-wrap:break-word">
+            ${c.description}
+          </td>
+          <td>
+            ${c.hostname}<br>
+            <small class="text-muted">${c.ip}</small>
+          </td>
+          <td>
+            <span class="badge ${c.status === "NEW" ? "bg-secondary" : "bg-warning"}">
+              ${c.status}
+            </span>
+          </td>
+          <td>
+            <select class="form-select form-select-sm">
+              ${admins.map(a =>
+                `<option value="${a.id}" ${a.name === c.assigned_admin ? "selected" : ""}>
+                  ${a.name}
+                </option>`
+              ).join("")}
+            </select>
+          </td>
+          <td class="d-flex gap-1">
+            <button class="btn btn-sm btn-primary">Assign</button>
+            <button class="btn btn-sm btn-warning">In Progress</button>
+            <button class="btn btn-sm btn-success">Completed</button>
+            <button class="btn btn-sm btn-danger">Rejected</button>
+          </td>
+        `;
 
-    const select = tr.querySelector("select");
-    const buttons = tr.querySelectorAll("button");
+        const select = tr.querySelector("select");
+        const buttons = tr.querySelectorAll("button");
 
-    buttons[0].onclick = () => updateAssign(c.id, select.value);
-    buttons[1].onclick = () => updateStatus(c.id, "IN_PROGRESS");
-    buttons[2].onclick = () => updateStatus(c.id, "COMPLETED");
-    buttons[3].onclick = () => updateStatus(c.id, "REJECTED");
+        buttons[0].onclick = () => updateAssign(c.id, select.value);
+        buttons[1].onclick = () => updateStatus(c.id, "IN_PROGRESS");
+        buttons[2].onclick = () => updateStatus(c.id, "COMPLETED");
+        buttons[3].onclick = () => updateStatus(c.id, "REJECTED");
 
-    tbody.appendChild(tr);
-  });
+        tbody.appendChild(tr);
+      });
+
+  } catch (err) {
+    console.error("Failed to load complaints", err);
+  }
 }
 
-/* ---------- API CALLS ---------- */
+/* ---------- ASSIGN ADMIN ---------- */
 async function updateAssign(id, adminId) {
   await fetch("http://localhost:3000/api/complaints/assign", {
     method: "POST",
@@ -68,6 +94,7 @@ async function updateAssign(id, adminId) {
   load();
 }
 
+/* ---------- UPDATE STATUS ---------- */
 async function updateStatus(id, status) {
   await fetch("http://localhost:3000/api/complaints/status", {
     method: "POST",
@@ -83,4 +110,10 @@ function logout() {
   window.location.href = "admin-login.html";
 }
 
+/* ---------- AUTO REFRESH (EVERY 10 SECONDS) ---------- */
+setInterval(() => {
+  load();
+}, 10000);
+
+/* ---------- INITIAL LOAD ---------- */
 load();
